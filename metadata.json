@@ -1,0 +1,11 @@
+{
+  "name": "বার্তা - Barta Messenger",
+  "description": "একটি আধুনিক ও চমৎকার মেসেজিং অ্যাপ যেখানে সরাসরি চ্যাট, গ্রুপ চ্যাট, অডিও নোট, এবং রিয়েল-টাইম বার্তা আদান-প্রদান করা যায়।",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
