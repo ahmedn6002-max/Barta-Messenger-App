@@ -6,13 +6,15 @@ import {
   Story, 
   Language, 
   ThemeMode, 
-  Attachment 
+  Attachment,
+  Announcement 
 } from './types';
 import { 
   INITIAL_USERS, 
   INITIAL_CHATS, 
   INITIAL_MESSAGES, 
   INITIAL_STORIES, 
+  INITIAL_ANNOUNCEMENTS,
   getStoredData, 
   setStoredData, 
   broadcastChannel 
@@ -26,6 +28,17 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { NewChatModal } from './components/NewChatModal';
 import { StoryViewerModal } from './components/StoryViewerModal';
 import { CallModal } from './components/CallModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
+import { AuthModal } from './components/AuthModal';
+import { 
+  auth, 
+  logoutFirebase, 
+  testFirestoreConnection, 
+  fetchAllUsersFromFirestore, 
+  syncUserToFirestore 
+} from './utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { X } from 'lucide-react';
 
 export default function App() {
   // 1. Core States
@@ -50,6 +63,12 @@ export default function App() {
     getStoredData('stories', INITIAL_STORIES)
   );
 
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => 
+    getStoredData('announcements', INITIAL_ANNOUNCEMENTS)
+  );
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>([]);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+
   const [activeChatId, setActiveChatId] = useState<string | null>('chat-tamim');
 
   // App Settings
@@ -66,6 +85,7 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [activeCall, setActiveCall] = useState<{
     contactName: string;
@@ -75,6 +95,50 @@ export default function App() {
 
   // Mobile View state
   const [mobileShowChat, setMobileShowChat] = useState(false);
+
+  // Initialize and listen to Firebase auth and database users
+  useEffect(() => {
+    testFirestoreConnection();
+
+    // Fetch existing users from Firestore database
+    fetchAllUsersFromFirestore().then((dbUsers) => {
+      if (dbUsers.length > 0) {
+        setUsers((prev) => {
+          const map = new Map<string, User>();
+          prev.forEach((u) => map.set(u.id, u));
+          dbUsers.forEach((u) => map.set(u.id, u));
+          return Array.from(map.values());
+        });
+      }
+    });
+
+    // Listen to Firebase Auth state
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const loggedUser: User = {
+          id: fbUser.uid,
+          name: fbUser.displayName || 'ব্যবহারকারী',
+          bengaliName: fbUser.displayName || 'ব্যবহারকারী',
+          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&h=200&q=80',
+          status: 'online',
+          bio: 'বার্তা অ্যাপে যুক্ত আছি 💬',
+          phone: fbUser.phoneNumber || '',
+          role: fbUser.email === 'ahmed.n6002@gmail.com' ? 'admin' : 'user',
+          isBlocked: false,
+          createdAt: Date.now()
+        };
+        setCurrentUser(loggedUser);
+        setUsers((prev) => {
+          if (!prev.find((u) => u.id === fbUser.uid)) {
+            return [loggedUser, ...prev];
+          }
+          return prev.map((u) => (u.id === fbUser.uid ? loggedUser : u));
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Sync to localStorage
   useEffect(() => {
@@ -96,6 +160,10 @@ export default function App() {
   useEffect(() => {
     setStoredData('stories', stories);
   }, [stories]);
+
+  useEffect(() => {
+    setStoredData('announcements', announcements);
+  }, [announcements]);
 
   useEffect(() => {
     setStoredData('theme', theme);
@@ -144,6 +212,17 @@ export default function App() {
             m.id === messageId ? { ...m, reactions } : m
           )
         }));
+      } else if (type === 'USER_BLOCK_STATUS') {
+        const { userId, isBlocked } = payload;
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, isBlocked } : u));
+        setCurrentUser(curr => curr.id === userId ? { ...curr, isBlocked } : curr);
+      } else if (type === 'USER_DELETED') {
+        const { userId } = payload;
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } else if (type === 'ANNOUNCEMENT_NEW') {
+        const { announcement } = payload;
+        setAnnouncements(prev => [announcement, ...prev]);
+        soundManager.playReceived();
       }
     };
 
@@ -494,6 +573,124 @@ export default function App() {
     });
   };
 
+  // Admin Actions: Block User
+  const handleBlockUser = (userId: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, isBlocked: true } : u));
+    if (currentUser.id === userId) {
+      setCurrentUser(curr => ({ ...curr, isBlocked: true }));
+    }
+    broadcastChannel?.postMessage({
+      type: 'USER_BLOCK_STATUS',
+      payload: { userId, isBlocked: true }
+    });
+  };
+
+  // Admin Actions: Unblock User
+  const handleUnblockUser = (userId: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, isBlocked: false } : u));
+    if (currentUser.id === userId) {
+      setCurrentUser(curr => ({ ...curr, isBlocked: false }));
+    }
+    broadcastChannel?.postMessage({
+      type: 'USER_BLOCK_STATUS',
+      payload: { userId, isBlocked: false }
+    });
+  };
+
+  // Admin Actions: Delete User
+  const handleDeleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    // Remove from direct chats with this user
+    setChats(prev => prev.filter(c => !(c.type === 'direct' && c.participants.includes(userId))));
+    broadcastChannel?.postMessage({
+      type: 'USER_DELETED',
+      payload: { userId }
+    });
+  };
+
+  // Admin Actions: Broadcast Notification to Everyone
+  const handleBroadcastNotification = (
+    annData: Omit<Announcement, 'id' | 'timestamp'>,
+    postToChats: boolean
+  ) => {
+    const newAnn: Announcement = {
+      id: `ann-${Date.now()}`,
+      title: annData.title,
+      message: annData.message,
+      type: annData.type,
+      timestamp: Date.now(),
+      active: true
+    };
+
+    setAnnouncements(prev => [newAnn, ...prev]);
+
+    if (postToChats) {
+      const broadcastText = `📢 [এডমিন নোটিফিকেশন / Admin Notice]\n${newAnn.title}\n\n${newAnn.message}`;
+      
+      setMessages(prev => {
+        const next = { ...prev };
+        chats.forEach(chat => {
+          const sysMsg: Message = {
+            id: `msg-ann-${chat.id}-${Date.now()}`,
+            chatId: chat.id,
+            senderId: 'admin-system',
+            senderName: 'বার্তা এডমিন',
+            senderAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&h=200&q=80',
+            text: broadcastText,
+            timestamp: Date.now(),
+            status: 'read' as const,
+            reactions: { '📢': [currentUser.id] }
+          };
+          next[chat.id] = [...(next[chat.id] || []), sysMsg];
+        });
+        return next;
+      });
+
+      setChats(prev => prev.map(c => ({
+        ...c,
+        lastMessage: {
+          text: `📢 ${newAnn.title}`,
+          timestamp: Date.now(),
+          senderName: 'বার্তা এডমিন',
+          senderId: 'admin-system'
+        }
+      })));
+    }
+
+    broadcastChannel?.postMessage({
+      type: 'ANNOUNCEMENT_NEW',
+      payload: { announcement: newAnn }
+    });
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+  };
+
+  // Auth Handlers: Success & Logout
+  const handleAuthSuccess = (authUser: User) => {
+    setCurrentUser(authUser);
+    setUsers((prev) => {
+      if (!prev.find((u) => u.id === authUser.id)) {
+        return [authUser, ...prev];
+      }
+      return prev.map((u) => (u.id === authUser.id ? authUser : u));
+    });
+    syncUserToFirestore(authUser);
+  };
+
+  const handleLogOut = async () => {
+    await logoutFirebase().catch(() => {});
+    const defaultUser = INITIAL_USERS[0];
+    setCurrentUser(defaultUser);
+    soundManager.playReaction();
+  };
+
+  const totalMessagesCount = Object.values(messages).reduce((acc, mList) => acc + mList.length, 0);
+
+  // Latest active announcement for banner (if not dismissed)
+  const latestAnnouncement = announcements.find(a => a.active && !dismissedAnnouncements.includes(a.id));
+
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
   const activeChatMessages = activeChat ? (messages[activeChat.id] || []) : [];
 
@@ -505,6 +702,32 @@ export default function App() {
         ? 'bg-emerald-950 text-slate-100'
         : 'bg-slate-950 text-slate-100'
     }`}>
+
+      {/* Global In-App Announcement Top Banner */}
+      {latestAnnouncement && (
+        <div className={`px-4 py-2 text-xs flex items-center justify-between z-30 shadow-md ${
+          latestAnnouncement.type === 'alert'
+            ? 'bg-rose-600 text-white'
+            : latestAnnouncement.type === 'warning'
+            ? 'bg-amber-600 text-white'
+            : latestAnnouncement.type === 'celebration'
+            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white'
+            : 'bg-cyan-700 text-white'
+        }`}>
+          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+            <span className="p-1 rounded-md bg-white/20 shrink-0">📢</span>
+            <span className="font-bold shrink-0">{latestAnnouncement.title}:</span>
+            <span className="truncate opacity-95">{latestAnnouncement.message}</span>
+          </div>
+          <button
+            onClick={() => setDismissedAnnouncements(prev => [...prev, latestAnnouncement.id])}
+            className="p-1 hover:bg-black/20 rounded-md transition-colors shrink-0"
+            title="Dismiss notice"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       
       {/* Main Container Layout */}
       <div className="flex-1 flex overflow-hidden">
@@ -521,6 +744,8 @@ export default function App() {
             onOpenStory={(idx) => setActiveStoryIndex(idx)}
             onOpenNewChatModal={() => setIsNewChatModalOpen(true)}
             onOpenProfileModal={() => setIsProfileModalOpen(true)}
+            onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
             lang={lang}
             onToggleLang={() => setLang(l => l === 'bn' ? 'en' : 'bn')}
             theme={theme}
@@ -587,6 +812,8 @@ export default function App() {
             setUsers(prev => prev.map(old => old.id === u.id ? u : old));
             setCurrentUser(u);
           }}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onLogOut={handleLogOut}
           onClose={() => setIsProfileModalOpen(false)}
           lang={lang}
         />
@@ -627,6 +854,31 @@ export default function App() {
           lang={lang}
         />
       )}
+
+      {/* Secure Admin Control Panel Modal */}
+      <AdminPanelModal
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        users={users}
+        currentUser={currentUser}
+        chats={chats}
+        totalMessagesCount={totalMessagesCount}
+        onBlockUser={handleBlockUser}
+        onUnblockUser={handleUnblockUser}
+        onDeleteUser={handleDeleteUser}
+        onBroadcastNotification={handleBroadcastNotification}
+        announcements={announcements}
+        onDeleteAnnouncement={handleDeleteAnnouncement}
+        lang={lang}
+      />
+
+      {/* Sign-Up & Login Modal with Email, Mobile & Google */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        lang={lang}
+      />
     </div>
   );
 }

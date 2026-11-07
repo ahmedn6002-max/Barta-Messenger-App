@@ -591,6 +591,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         onSendMessage={onSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
+        isUserBlocked={currentUser.isBlocked}
         lang={lang}
       />
 

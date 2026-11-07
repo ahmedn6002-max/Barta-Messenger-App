@@ -1,12 +1,14 @@
 import React from 'react';
 import { User, Language } from '../types';
-import { Check, UserCheck, X } from 'lucide-react';
+import { Check, UserCheck, X, LogIn, LogOut } from 'lucide-react';
 
 interface UserProfileModalProps {
   currentUser: User;
   allUsers: User[];
   onSelectUser: (user: User) => void;
   onUpdateCurrentUser: (updated: User) => void;
+  onOpenAuthModal: () => void;
+  onLogOut: () => void;
   onClose: () => void;
   lang: Language;
 }
@@ -15,6 +17,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   currentUser,
   allUsers,
   onSelectUser,
+  onOpenAuthModal,
+  onLogOut,
   onClose,
   lang
 }) => {
@@ -61,6 +65,32 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <p className="text-xs text-slate-400 truncate mt-0.5">{currentUser.bio}</p>
             <p className="text-[11px] text-slate-500 mt-0.5">{currentUser.phone}</p>
           </div>
+        </div>
+
+        {/* Account Auth Actions */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => {
+              onClose();
+              onOpenAuthModal();
+            }}
+            className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>{lang === 'bn' ? 'সাইন-আপ / লগইন' : 'Sign Up / Login'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onLogOut();
+              onClose();
+            }}
+            className="py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+            title={lang === 'bn' ? 'লগআউট' : 'Log Out'}
+          >
+            <LogOut className="w-4 h-4 text-rose-400" />
+            <span className="hidden sm:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+          </button>
         </div>
 
         {/* Switch identity list */}

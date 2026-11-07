@@ -8,7 +8,10 @@ export const INITIAL_USERS: User[] = [
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&h=200&q=80',
     status: 'online',
     bio: 'বার্তা অ্যাপ ব্যবহার করছি 💬',
-    phone: '+৮৮০ ১৭০০-০০০০০০'
+    phone: '+৮৮০ ১৭০০-০০০০০০',
+    role: 'admin',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 30
   },
   {
     id: 'user-tamim',
@@ -17,7 +20,10 @@ export const INITIAL_USERS: User[] = [
     avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&h=200&q=80',
     status: 'online',
     bio: 'কোডিং এবং কফি ☕️',
-    phone: '+৮৮০ ১৭১১-১১২২৩৩'
+    phone: '+৮৮০ ১৭১১-১১২২৩৩',
+    role: 'user',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 25
   },
   {
     id: 'user-sumaiya',
@@ -26,7 +32,10 @@ export const INITIAL_USERS: User[] = [
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80',
     status: 'online',
     bio: 'ইউএক্স ডিজাইনার ও ফটোগ্রাফার ✨',
-    phone: '+৮৮০ ১৯১২-৩৪৫৬৭৮'
+    phone: '+৮৮০ ১৯১২-৩৪৫৬৭৮',
+    role: 'user',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 20
   },
   {
     id: 'user-sabbir',
@@ -36,7 +45,10 @@ export const INITIAL_USERS: User[] = [
     status: 'offline',
     lastSeen: '১০ মিনিট আগে',
     bio: 'সদা হাসিখুশি 😊',
-    phone: '+৮৮০ ১৮৩৩-৯৯৮৮৭৭'
+    phone: '+৮৮০ ১৮৩৩-৯৯৮৮৭৭',
+    role: 'user',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 15
   },
   {
     id: 'user-priya',
@@ -45,7 +57,10 @@ export const INITIAL_USERS: User[] = [
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80',
     status: 'online',
     bio: 'বই পড়া এবং ভ্রমণ 📚✈️',
-    phone: '+৮৮০ ১৬০০-১১২২৩৩'
+    phone: '+৮৮০ ১৬০০-১১২২৩৩',
+    role: 'user',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 10
   },
   {
     id: 'user-tanvir',
@@ -55,7 +70,10 @@ export const INITIAL_USERS: User[] = [
     status: 'offline',
     lastSeen: 'গতকাল রাত ৯:৪৫',
     bio: 'কাজের মধ্যে আছি 💻',
-    phone: '+৮৮০ ১৮১২-৪৫৬৭৮৯'
+    phone: '+৮৮০ ১৮১২-৪৫৬৭৮৯',
+    role: 'user',
+    isBlocked: false,
+    createdAt: Date.now() - 86400000 * 5
   }
 ];
 
@@ -297,7 +315,36 @@ export function setStoredData<T>(key: string, value: T): void {
   }
 }
 
+// Initial system announcements
+export const INITIAL_ANNOUNCEMENTS = [
+  {
+    id: 'ann-1',
+    title: 'বার্তা মেসেঞ্জারে স্বাগতম! 🚀',
+    message: 'বার্তা মেসেঞ্জারে যোগ দেওয়ার জন্য ধন্যবাদ। যেকোনো মতামত বা সহায়তার জন্য আমাদের জানান।',
+    timestamp: Date.now() - 3600000 * 24,
+    type: 'celebration' as const,
+    active: true
+  }
+];
+
+// Admin password management (Default: admin123)
+const DEFAULT_ADMIN_PASSWORD = 'admin123';
+
+export function getAdminPassword(): string {
+  return getStoredData<string>('admin_password', DEFAULT_ADMIN_PASSWORD);
+}
+
+export function setAdminPassword(newPass: string): void {
+  setStoredData<string>('admin_password', newPass);
+}
+
+export function verifyAdminPassword(input: string): boolean {
+  const current = getAdminPassword();
+  return input === current;
+}
+
 // Multi-tab Broadcast Channel
 export const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window 
   ? new BroadcastChannel('barta_live_sync')
   : null;
+

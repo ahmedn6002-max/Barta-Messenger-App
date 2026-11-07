@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with authentication and profile details",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID (matches auth.uid)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the user"
+        },
+        "bengaliName": {
+          "type": "string",
+          "description": "Bengali representation of the name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "phone": {
+          "type": "string",
+          "description": "User mobile phone number"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "status": {
+          "type": "string",
+          "description": "Online presence status",
+          "enum": ["online", "offline", "typing"]
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short bio or tagline"
+        },
+        "role": {
+          "type": "string",
+          "description": "Access control role",
+          "enum": ["user", "admin"]
+        },
+        "isBlocked": {
+          "type": "boolean",
+          "description": "Whether the user account is suspended by admin"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile last updated timestamp"
+        }
+      },
+      "required": ["id", "name"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "System-wide announcement or alert sent by admin",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique announcement ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Announcement headline"
+        },
+        "message": {
+          "type": "string",
+          "description": "Full announcement text content"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["info", "warning", "alert", "celebration"],
+          "description": "Urgency category"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the announcement is active"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time the announcement was created"
+        }
+      },
+      "required": ["id", "title", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Registered user profile documents"
+    },
+    "/announcements/{announcementId}": {
+      "schema": {
+        "$ref": "#/entities/Announcement"
+      },
+      "description": "Global system announcements"
+    }
+  }
+}

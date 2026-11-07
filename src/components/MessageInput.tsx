@@ -9,7 +9,8 @@ import {
   Image as ImageIcon, 
   Trash2, 
   Square,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 
 interface MessageInputProps {
@@ -17,6 +18,7 @@ interface MessageInputProps {
   replyingTo: Message | null;
   onCancelReply: () => void;
   onTyping?: (isTyping: boolean) => void;
+  isUserBlocked?: boolean;
   lang: Language;
 }
 
@@ -36,6 +38,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   replyingTo,
   onCancelReply,
   onTyping,
+  isUserBlocked,
   lang
 }) => {
   const [text, setText] = useState('');
@@ -267,9 +270,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      {/* Main Input Row */}
-      <div className="flex items-end gap-2">
-        {isRecording ? (
+      {/* Blocked User Notice or Main Input Row */}
+      {isUserBlocked ? (
+        <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-2xl flex items-center justify-center gap-2.5 text-rose-300 text-xs">
+          <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+          <span className="font-medium">
+            {lang === 'bn' 
+              ? 'আপনার অ্যাকাউন্টটি এডমিন কর্তৃক ব্লক করা হয়েছে। নতুন বার্তা পাঠানো স্থগিত রয়েছে।' 
+              : 'Your account has been suspended by the administrator. Sending messages is disabled.'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-end gap-2">
+          {isRecording ? (
           // Recording in progress mode
           <div className="flex-1 flex items-center justify-between bg-slate-800/80 border border-rose-500/40 rounded-2xl px-4 py-2.5 text-white animate-pulse">
             <div className="flex items-center gap-3">
@@ -475,7 +488,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             )}
           </>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

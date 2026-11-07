@@ -45,6 +45,18 @@ export interface User {
   lastSeen?: string;
   bio: string;
   phone?: string;
+  isBlocked?: boolean;
+  role?: 'admin' | 'user';
+  createdAt?: number;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: number;
+  type: 'info' | 'warning' | 'alert' | 'celebration';
+  active: boolean;
 }
 
 export interface Chat {

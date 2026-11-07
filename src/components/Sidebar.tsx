@@ -14,7 +14,9 @@ import {
   Languages, 
   UserCheck,
   CheckCheck,
-  Sparkles
+  Sparkles,
+  Shield,
+  LogIn
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +28,8 @@ interface SidebarProps {
   onOpenStory: (index: number) => void;
   onOpenNewChatModal: () => void;
   onOpenProfileModal: () => void;
+  onOpenAdminPanel: () => void;
+  onOpenAuthModal: () => void;
   lang: Language;
   onToggleLang: () => void;
   theme: ThemeMode;
@@ -43,6 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenStory,
   onOpenNewChatModal,
   onOpenProfileModal,
+  onOpenAdminPanel,
+  onOpenAuthModal,
   lang,
   onToggleLang,
   theme,
@@ -133,6 +139,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
+            {/* Admin Panel Button */}
+            <button
+              onClick={onOpenAdminPanel}
+              className="p-1.5 rounded-lg text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all shadow-xs"
+              title={lang === 'bn' ? 'সিকিউর এডমিন প্যানেল' : 'Secure Admin Panel'}
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+
+            {/* Auth / Sign Up & Login Button */}
+            <button
+              onClick={onOpenAuthModal}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all shadow-xs flex items-center gap-1 text-xs"
+              title={lang === 'bn' ? 'সাইন-আপ / লগইন' : 'Sign Up / Login'}
+            >
+              <LogIn className="w-4 h-4 text-emerald-400" />
+            </button>
+
             {/* New Chat Button */}
             <button
               onClick={onOpenNewChatModal}
@@ -147,25 +171,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Current Active User Profile Banner (Clickable to switch identity) */}
         <div 
           onClick={onOpenProfileModal}
-          className="flex items-center justify-between p-2 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 cursor-pointer transition-all hover:scale-[1.01]"
+          className={`flex items-center justify-between p-2 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] ${
+            currentUser.isBlocked 
+              ? 'bg-rose-950/30 border-rose-500/40' 
+              : 'bg-slate-800/70 hover:bg-slate-800 border-slate-700/60'
+          }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative">
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-500"
+                className={`w-8 h-8 rounded-full object-cover ring-2 ${
+                  currentUser.isBlocked ? 'ring-rose-500 grayscale' : 'ring-emerald-500'
+                }`}
               />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+              <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
+                currentUser.isBlocked ? 'bg-rose-500' : 'bg-emerald-500'
+              }`} />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
                 <span>{currentUser.name}</span>
-                <span className="text-[10px] text-emerald-400 font-normal">
-                  ({lang === 'bn' ? 'সক্রিয়' : 'You'})
-                </span>
+                {currentUser.isBlocked ? (
+                  <span className="text-[10px] text-rose-400 font-semibold px-1 rounded-sm bg-rose-500/20">
+                    {lang === 'bn' ? 'ব্লকড' : 'Blocked'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-emerald-400 font-normal">
+                    ({lang === 'bn' ? 'সক্রিয়' : 'You'})
+                  </span>
+                )}
               </p>
-              <p className="text-[10px] text-slate-400 truncate">{currentUser.bio}</p>
+              <p className="text-[10px] text-slate-400 truncate">
+                {currentUser.isBlocked 
+                  ? (lang === 'bn' ? '🚫 বার্তা পাঠানো স্থগিত' : '🚫 Messaging Suspended')
+                  : currentUser.bio}
+              </p>
             </div>
           </div>
 
