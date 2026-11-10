@@ -35,7 +35,8 @@ import {
   logoutFirebase, 
   testFirestoreConnection, 
   fetchAllUsersFromFirestore, 
-  syncUserToFirestore 
+  syncUserToFirestore,
+  updateUserProfileInFirebase 
 } from './utils/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { X } from 'lucide-react';
@@ -679,6 +680,68 @@ export default function App() {
     syncUserToFirestore(authUser);
   };
 
+  // Update current user profile (Avatar, Name, Bio, Phone)
+  const handleUpdateCurrentUser = async (updated: User) => {
+    // 1. Update currentUser and users list
+    setCurrentUser(updated);
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+
+    // 2. Update existing chats where this user is participant or sender
+    setChats(prev => prev.map(c => {
+      let changed = false;
+      let lastMsg = c.lastMessage;
+      let chatAvatar = c.avatar;
+      let chatName = c.name;
+
+      if (c.lastMessage && c.lastMessage.senderId === updated.id) {
+        lastMsg = {
+          ...c.lastMessage,
+          senderName: updated.name
+        };
+        changed = true;
+      }
+
+      // If direct chat and the other person is seeing this user
+      if (c.type === 'direct' && c.id === `chat-direct-${updated.id}`) {
+        chatAvatar = updated.avatar;
+        chatName = updated.name;
+        changed = true;
+      }
+
+      return changed ? { ...c, avatar: chatAvatar, name: chatName, lastMessage: lastMsg } : c;
+    }));
+
+    // 3. Update messages sent by updated user
+    setMessages(prev => {
+      const next = { ...prev };
+      let anyChanged = false;
+      Object.keys(next).forEach(chatId => {
+        const msgs = next[chatId];
+        if (msgs && msgs.some(m => m.senderId === updated.id)) {
+          anyChanged = true;
+          next[chatId] = msgs.map(m => m.senderId === updated.id ? {
+            ...m,
+            senderName: updated.name,
+            senderAvatar: updated.avatar
+          } : m);
+        }
+      });
+      return anyChanged ? next : prev;
+    });
+
+    // 4. Update stories if user has stories
+    setStories(prev => prev.map(s => s.userId === updated.id ? {
+      ...s,
+      userName: updated.name,
+      userAvatar: updated.avatar
+    } : s));
+
+    // 5. Update Firebase Auth and Firestore
+    await updateUserProfileInFirebase(updated.id, updated).catch(err => {
+      console.warn('Firebase profile sync error:', err);
+    });
+  };
+
   const handleLogOut = async () => {
     await logoutFirebase().catch(() => {});
     const defaultUser = INITIAL_USERS[0];
@@ -808,10 +871,7 @@ export default function App() {
           currentUser={currentUser}
           allUsers={users}
           onSelectUser={(u) => setCurrentUser(u)}
-          onUpdateCurrentUser={(u) => {
-            setUsers(prev => prev.map(old => old.id === u.id ? u : old));
-            setCurrentUser(u);
-          }}
+          onUpdateCurrentUser={handleUpdateCurrentUser}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onLogOut={handleLogOut}
           onClose={() => setIsProfileModalOpen(false)}

@@ -388,6 +388,33 @@ export async function syncUserToFirestore(user: User): Promise<void> {
   }
 }
 
+// Update User Profile (Avatar, Name, Bio) in Firebase Auth & Firestore
+export async function updateUserProfileInFirebase(userId: string, updates: Partial<User>): Promise<void> {
+  // 1. Update Firebase Auth user profile if current authenticated user
+  if (auth.currentUser && auth.currentUser.uid === userId) {
+    const authUpdates: { displayName?: string; photoURL?: string } = {};
+    if (updates.name) authUpdates.displayName = updates.name;
+    if (updates.avatar) authUpdates.photoURL = updates.avatar;
+    
+    if (Object.keys(authUpdates).length > 0) {
+      await updateProfile(auth.currentUser, authUpdates).catch((err) => {
+        console.warn('updateProfile in Firebase Auth warning:', err);
+      });
+    }
+  }
+
+  // 2. Persist update in Firestore users collection
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await setDoc(userDocRef, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Failed to update user profile in Firestore:', err);
+  }
+}
+
 // Fetch all registered users from Firestore
 export async function fetchAllUsersFromFirestore(): Promise<User[]> {
   try {

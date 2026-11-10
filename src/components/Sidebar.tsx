@@ -16,7 +16,8 @@ import {
   CheckCheck,
   Sparkles,
   Shield,
-  LogIn
+  LogIn,
+  Camera
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -178,17 +179,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative">
+            <div className="relative group/avatar">
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className={`w-8 h-8 rounded-full object-cover ring-2 ${
-                  currentUser.isBlocked ? 'ring-rose-500 grayscale' : 'ring-emerald-500'
+                className={`w-9 h-9 rounded-full object-cover ring-2 transition-all ${
+                  currentUser.isBlocked ? 'ring-rose-500 grayscale' : 'ring-emerald-500 group-hover/avatar:ring-emerald-400'
                 }`}
               />
               <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
                 currentUser.isBlocked ? 'bg-rose-500' : 'bg-emerald-500'
               }`} />
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="w-3.5 h-3.5 text-white" />
+              </div>
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
@@ -211,9 +215,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <UserCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{lang === 'bn' ? 'স্যুইচ' : 'Switch'}</span>
+          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+            <Camera className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{lang === 'bn' ? 'ছবি ও প্রোফাইল' : 'Profile'}</span>
           </div>
         </div>
       </div>
